@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:flutter/services.dart' show rootBundle;
 
 void main() {
   runApp(const MyApp());
@@ -49,6 +48,7 @@ class MyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    WebViewController? controller;
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -61,8 +61,24 @@ class MyHomePage extends StatelessWidget {
         ).toString(),
         javascriptMode: JavascriptMode.unrestricted,
         onWebViewCreated: (WebViewController controller) {
-          controller
-              .clearCache(); 
+          controller.clearCache();
+          controller = controller;
+        },
+        onPageFinished: (String _) async {
+          controller!.evaluateJavascript('''
+      window.addEventListener('scroll', function(e) {
+        if ((Math.ceil(window.innerHeight + window.pageYOffset)) >= document.body.offsetHeight) {
+          ScrollCallback.postMessage('END OF PAGE!!!');
+        }
+      });
+    ''');
+        },
+        javascriptChannels: <JavascriptChannel>{
+          JavascriptChannel(
+              name: 'ScrollCallback',
+              onMessageReceived: (JavascriptMessage message) {
+                print(message.message);
+              }),
         },
       ),
     );
